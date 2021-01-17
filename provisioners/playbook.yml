@@ -1,0 +1,65 @@
+---
+- name: Ansible provisioning
+  hosts: all
+  become: yes
+  become_user: root
+  vars:
+
+    create_user: hichem
+    password_hash: $6$mysecretsalt$MIJffjeQyfrKKrGkprGrDL/g2mCJa53koLmYQuuLmY9y37pDvGKPXU1Ov3RbMi.tpQ9cWvxAzUVtBLe7KrZoU. # hash for word password
+  tasks:
+        
+    - name: permit root login
+      lineinfile: 
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        state: present
+        
+    - name: permit password Authentification
+      lineinfile: 
+        path: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication'
+        line: 'PasswordAuthentication yes'
+        state: present
+        
+    - name: restart sshd service
+      service:  name=sshd  state=restarted
+      
+    - name: Make sure we have a 'wheel' group
+      group:
+         name: wheel
+         state: present
+
+    - name: Allow 'wheel' group to have passwordless sudo
+      lineinfile:
+          dest: /etc/sudoers
+          state: present
+          regexp: '^%wheel'
+          line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+          validate: 'visudo -cf %s'
+          
+    - name: create ansible user with password='password'
+      user: name="{{create_user}}"  shell=/bin/bash generate_ssh_key=yes  password='{{password_hash}}' groups=wheel state=present createhome=yes
+      
+    - name: set ansible user with passwordless sudo
+      copy:
+        content: '{{create_user}} ALL=(ALL) NOPASSWD: ALL' 
+        dest: /etc/sudoers.d/{{create_user}}
+        force: yes  
+         
+    - name: disable firewall service
+      service: 
+          name: "ufw"  
+          state: stopped 
+          enabled: false
+      when: ansible_facts.os_family == "Debian"
+
+    - name: disable firewall service
+      service: 
+          name: "firewalld"  
+          state: stopped 
+          enabled: false
+      when: ansible_facts.os_family == "RedHat"
+        
+...

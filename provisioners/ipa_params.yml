@@ -1,0 +1,14 @@
+# Server setup
+ipaadmin_principal: admin
+ipaadmin_password: password
+ipadm_password: password
+ipaserver_domain: test.local
+ipaserver_realm: TEST.LOCAL
+ipaserver_setup_dns: yes
+ipaserver_no_reverse: yes
+ipaserver_no_forwarders: yes
+
+# client setup
+ipaclient_servers: ipa.test.local
+ipaserver_ip_addresse: 192.168.121.100
+

@@ -1,0 +1,51 @@
+---
+- name: Ansible provisioning
+  hosts: all
+  become: yes
+  become_user: root
+  vars:
+  tasks:
+        
+    - name: permit root login
+      lineinfile: 
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        state: present
+        
+    - name: permit password Authentification
+      lineinfile: 
+        path: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication'
+        line: 'PasswordAuthentication yes'
+        state: present
+        
+    - name: restart sshd service
+      service:  name=sshd  state=restarted
+      
+    - name: Make sure we have a 'wheel' group
+      group:
+         name: wheel
+         state: present
+
+    - name: Allow 'wheel' group to have passwordless sudo
+      lineinfile:
+          dest: /etc/sudoers
+          state: present
+          regexp: '^%wheel'
+          line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+          validate: 'visudo -cf %s'
+
+
+
+- name: install freeipa 
+  become: true
+  hosts: all
+  vars_files:
+    - ipa_params.yml    
+  roles:
+  - role: ipaserver
+    state: present
+    
+
+...

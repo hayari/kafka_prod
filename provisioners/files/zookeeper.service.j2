@@ -1,0 +1,21 @@
+# /usr/lib/systemd/system/zookeeper.service
+[Unit]
+Description=Apache Zookeeper server (Kafka)
+Documentation=http://zookeeper.apache.org
+Requires=network.target remote-fs.target 
+After=network.target remote-fs.target
+
+[Service]
+Type=simple
+User={{zk_user_operator}}
+Group={{zk_group_operator}}
+WorkingDirectory={{zk_install_path}}
+SyslogIdentifier=zookeeper
+ExecStart={{zk_install_path}}/bin/zookeeper-server-start.sh  {{zk_install_path}}/config/zookeeper.properties
+ExecStop={{zk_install_path}}t/bin/zookeeper-server-stop.sh
+LimitNOFILE=100000
+TimeoutStopSec=180
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

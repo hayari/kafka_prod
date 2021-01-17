@@ -1,0 +1,13 @@
+# all options https://github.com/confluentinc/cp-docker-images/blob/5.3.1-post/debian/zookeeper/include/etc/confluent/docker/zookeeper.properties.template
+dataDir={{zk_data_dir}}
+dataLogDir={{zk_dataLogDir}}
+# the port at which the clients will connect
+clientPort={{zk_clientPort}}
+# disable the per-ip limit on the number of connections since this is a non-production config
+maxClientCnxns={{zk_maxClientCnxns}}
+# Disable the adminserver by default to avoid port conflicts.
+# Set the port to something non-conflicting if choosing to enable this
+admin.enableServer={{zk_admin_enableServer}}
+{% if zk_admin_enableServer %}
+admin.serverPort="{{zk_admin_serverPort}}"
+{% endif %}

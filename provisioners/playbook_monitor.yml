@@ -1,0 +1,98 @@
+---
+- name: Ansible provisioning
+  hosts: all
+  become: yes
+  become_user: root
+  vars:
+    firewall_service: ufw
+    create_user: hichem
+    password_hash: $6$mysecretsalt$MIJffjeQyfrKKrGkprGrDL/g2mCJa53koLmYQuuLmY9y37pDvGKPXU1Ov3RbMi.tpQ9cWvxAzUVtBLe7KrZoU. # hash for word password
+  tasks:
+        
+    - name: permit root login
+      lineinfile: 
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        state: present
+        
+    - name: permit password Authentification
+      lineinfile: 
+        path: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication'
+        line: 'PasswordAuthentication yes'
+        state: present
+        
+    - name: restart sshd service
+      service:  name=sshd  state=restarted
+      
+    - name: Make sure we have a 'wheel' group
+      group:
+         name: wheel
+         state: present
+
+    - name: Allow 'wheel' group to have passwordless sudo
+      lineinfile:
+          dest: /etc/sudoers
+          state: present
+          regexp: '^%wheel'
+          line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+          validate: 'visudo -cf %s'
+          
+    - name: create ansible user with password='password'
+      user: name="{{create_user}}"  shell=/bin/bash generate_ssh_key=yes  password='{{password_hash}}' groups=wheel state=present createhome=yes
+      
+    - name: set ansible user with passwordless sudo
+      copy:
+        content: '{{create_user}} ALL=(ALL) NOPASSWD: ALL' 
+        dest: /etc/sudoers.d/{{create_user}}
+        force: yes  
+         
+    - name: disable firewalle service
+      service: name="{{firewall_service}}"  state=stopped enabled=false
+    
+    - name: Add docker apt key
+      apt_key:
+         url: https://download.docker.com/linux/ubuntu/gpg
+         state: present
+
+    - name: get ubuntu release name
+      command: lsb_release -cs
+      register: release_name
+
+    - name: add Docker repo
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{release_name.stdout}} stable"
+        state: present
+        filename: docker
+
+    - name: install Docker    
+      package: 
+        name:
+          - "docker-ce" 
+          - "docker-ce-cli" 
+          - "containerd.io"
+          - "curl"
+
+    - name: start Docker Service
+      service:
+        name: docker
+        state: started 
+        enabled: yes 
+    
+    - name: install docker compose
+      shell: 
+        cmd: 'curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose'
+        creates: "/usr/local/bin/docker-compose"
+
+    - name: set execute for docker compose
+      file: 
+        path: '/usr/local/bin/docker-compose'
+        mode: '0755'  
+
+    - name: add vagrant user to docker docker group
+      user:
+        name: vagrant
+        groups: docker
+        append: yes
+...

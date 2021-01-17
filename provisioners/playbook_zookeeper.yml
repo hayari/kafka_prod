@@ -1,0 +1,214 @@
+---
+- name: Ansible provisioning
+  hosts: all
+  become: yes
+  become_user: root
+  vars:
+
+  tasks:
+
+        
+    - name: permit root login
+      lineinfile: 
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        state: present
+        
+    - name: permit password Authentification
+      lineinfile: 
+        path: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication'
+        line: 'PasswordAuthentication yes'
+        state: present
+        
+    - name: restart sshd service
+      service:  name=sshd  state=restarted
+      
+    - name: Make sure we have a 'wheel' group
+      group:
+         name: wheel
+         state: present
+
+    - name: Allow 'wheel' group to have passwordless sudo
+      lineinfile:
+          path: /etc/sudoers
+          state: present
+          regexp: '^%wheel'
+          line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+          validate: 'visudo -cf %s'
+
+    - name: disable firewall service
+      service: 
+         name: "ufw"  
+         state: stopped 
+         enabled: false
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: disable firewall service
+      service: 
+          name: "firewalld"  
+          state: stopped 
+          enabled: false
+      when: ansible_facts['os_family'] == "RedHat"
+
+
+- name: register client in freeipa 
+  become: true
+  hosts: all
+  vars_files:
+    - ipa_params.yml 
+  pre_tasks:
+   - add_host:
+      name: "{{ipaclient_servers}}"   
+      groups: "ipaserver"
+
+  roles:
+  - role: ipaclient
+    state: present
+  
+  post_tasks:
+  - name: make sure line 'dns=none' is set in /etc/NetworkManager/NetworkManager.conf
+    ini_file:
+      path: /etc/NetworkManager/NetworkManager.conf
+      state: present
+      no_extra_spaces: yes
+      section: main
+      option: dns
+      value: none
+      owner: root
+      group: root
+      mode: 0644
+      backup: yes 
+  
+  - name: set DNS server
+    lineinfile:
+      path: /etc/resolv.conf
+      state: present
+      regexp: '^nameserver'
+      line: nameserver {{ipaserver_ip_addresse }}
+
+    
+  - name: reload NetworkManager
+    service:
+      name: NetworkManager
+      state: reloaded
+      
+
+- name: zookeeper install
+  hosts: all
+  vars_files:
+    - kafka_params.yml
+  tasks:
+    - name: create zk opertor group
+      group:
+        name: "{{zk_group_operator}}"
+        state: present
+
+    - name: create zk opertor
+      user: 
+        name: "{{zk_user_operator}}"  
+        group: "{{zk_group_operator}}"
+        generate_ssh_key: yes  
+        password: '{{zk_operator_password_hash}}' 
+        groups: wheel 
+        state: present 
+        createhome: yes
+      when: create_zk_operator
+
+    - name: set zk operator with passwordless sudo
+      copy:
+        content: '{{zk_user_operator}} ALL=(ALL) NOPASSWD: ALL' 
+        dest: /etc/sudoers.d/{{zk_user_operator}}
+        force: yes  
+      when: create_zk_operator
+         
+    - name: remove swap
+      lineinfile: 
+        path: /etc/fstab
+        regexp: 'swap'
+        state: absent
+        
+    - name: disable swap
+      command: "swapoff -a"
+
+    - name: Set vm.swappiness  in /etc/sysctl.conf
+      sysctl:
+        name: vm.swappiness
+        value: '0'
+        state: present
+        reload: yes
+
+    - name: install some software
+      package:
+        name: 
+          - wget
+          - ca-certificates
+          - zip
+          - net-tools
+          - tar
+          - java-1.8.0-openjdk
+          - vim
+          - nc
+        state: present
+    - 
+    - name: download kafka with zookeeper
+      get_url:
+        url: "https://downloads.apache.org/kafka/{{kafka_version}}/kafka_{{scala_version}}-{{kafka_version}}.tgz"
+        dest: /tmp/kafka.tgz
+        mode: '0440'
+      when: download_kafka
+
+    - name: copy kafka with zookeeper
+      copy:
+        src: "files/kafka_{{scala_version}}-{{kafka_version}}.tgz"
+        dest: /tmp/kafka.tgz
+        mode: '0440'
+      when: not download_kafka
+
+    
+    - name: uncompress zookeeper zipfile
+      unarchive:
+        src: /tmp/kafka.tgz
+        remote_src: yes
+        dest: /tmp
+    
+    - name: remove old installation if exist
+      file:
+        path: "{{zk_install_path}}"
+        state: absent
+    
+    - name: copy kafka files
+      command: "mv /tmp/kafka_{{scala_version}}-{{kafka_version}}  {{zk_install_path}}"
+
+    - name: adjust zookeeper dir ownership
+      file:
+        path: "{{zk_install_path}}"
+        state: directory
+        recurse: yes
+        owner: "{{zk_user_operator}}"
+        group: "{{zk_group_operator}}" 
+
+    - name: update zk config
+      template:
+        src: files/zookeeper.properties.j2
+        dest: "{{zk_install_path}}/config/zookeeper.properties"
+    
+    - name: update zk running parameters
+      template:
+        src: files/zookeeper-server-start.sh.j2
+        dest: "{{zk_install_path}}/bin/zookeeper-server-start.sh"
+
+    - name: create systemd service file
+      template:
+        src: files/zookeeper.service.j2
+        dest: /usr/lib/systemd/system/zookeeper.service
+
+    - name: enable zookeeper service
+      systemd:
+        daemon_reload: yes
+        name: zookeeper
+        state: restarted
+        enabled: yes
+      
+...

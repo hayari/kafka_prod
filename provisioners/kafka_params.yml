@@ -1,0 +1,27 @@
+download_kafka: no
+kafka_version: 2.7.0
+scala_version: 2.13
+
+# zookeeper
+zk_install_path: /zookeeper
+
+create_zk_operator: yes
+zk_operator_password_hash: $6$mysecretsalt$MIJffjeQyfrKKrGkprGrDL/g2mCJa53koLmYQuuLmY9y37pDvGKPXU1Ov3RbMi.tpQ9cWvxAzUVtBLe7KrZoU. # hash for word password
+zk_user_operator: zkuser
+zk_group_operator: zkgroup
+zk_data_dir: /zookeeper/data
+zk_dataLogDir: /zookeeper/data/log
+zk_clientPort: 2181
+zk_maxClientCnxns: 0
+zk_admin_enableServer: false
+zk_admin_serverPort: 8080
+zk_opts: |
+  export KAFKA_OPTS="-Dzookeeper.4lw.commands.whitelist=*"
+
+
+
+#kafka_install_path: /kafka
+#create_kafka_operator: no
+#kafka_operator_password_hash: $6$mysecretsalt$MIJffjeQyfrKKrGkprGrDL/g2mCJa53koLmYQuuLmY9y37pDvGKPXU1Ov3RbMi.tpQ9cWvxAzUVtBLe7KrZoU. # hash for word password
+#kafka_user_operator: vagrant
+#kafka_group_operator: vagrant
