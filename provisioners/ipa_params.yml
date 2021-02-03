@@ -11,4 +11,6 @@ ipaserver_no_forwarders: yes
 # client setup
 ipaclient_servers: ipa.test.local
 ipaserver_ip_addresse: 192.168.121.100
-
+ipaclient_force_join: yes
+ipaclient_no_dns_sshfp: yes
+ipaclient_force: yes

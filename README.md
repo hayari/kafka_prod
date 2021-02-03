@@ -1,4 +1,5 @@
-git clone https://github.com/freeipa/ansible-freeipa.git provisionners/ansible-freeipa
+git clone https://github.com/freeipa/ansible-freeipa.git provisioners/ansible-freeipa
+cp -r provisioners/ansible-freeipa/roles provisioners/
 vagrant up
 
 

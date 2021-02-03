@@ -48,7 +48,7 @@
         dest: /etc/sudoers.d/{{create_user}}
         force: yes  
          
-    - name: disable firewalle service
+    - name: disable firewall service
       service: name="{{firewall_service}}"  state=stopped enabled=false
     
     - name: Add docker apt key
@@ -73,6 +73,9 @@
           - "docker-ce-cli" 
           - "containerd.io"
           - "curl"
+          - apt-transport-https
+          - ca-certificates
+          - software-properties-common
 
     - name: start Docker Service
       service:
@@ -95,4 +98,109 @@
         name: vagrant
         groups: docker
         append: yes
+
+    - name: verify compose directories
+      file:
+        path: "{{item}}"
+        state: directory
+      with_items:
+        - /etc/docker-compose
+        - /etc/docker-compose/watchtower
+
+    - name: create systemd service
+      copy:
+        src: files/docker-compose.service
+        dest: "/etc/systemd/system/docker-compose@.service"
+
+    - name: configure automatic reload of systemd to Regularly pull and build new Docker images
+      cron:
+        name: "systemctl reload docker services"
+        minute: "0"
+        hour: "4"
+        job: "/bin/systemctl reload docker-compose@*.service"
+
+    - name: create watchtower compose file
+      copy:
+        src: files/watchtower-docker-compose.yml
+        dest: /etc/docker-compose/watchtower/docker-compose.yml
+    
+    - name: start watchtower service
+      systemd:
+       name: docker-compose@watchtower
+       state: started
+       enabled: yes
+       daemon_reload: yes
+
+# - name: register client in freeipa 
+#   become: true
+#   hosts: all
+#   vars_files:
+#     - ipa_params.yml 
+#   pre_tasks:
+#    - add_host:
+#       name: "{{ipaclient_servers}}"   
+#       groups: "ipaserver"
+
+#   roles:
+#   - role: ipaclient
+#     state: present
+    
+  
+#   post_tasks:
+#   - name: make sure line 'dns=none' is set in /etc/NetworkManager/NetworkManager.conf
+#     ini_file:
+#       path: /etc/NetworkManager/NetworkManager.conf
+#       state: present
+#       no_extra_spaces: yes
+#       section: main
+#       option: dns
+#       value: none
+#       owner: root
+#       group: root
+#       mode: 0644
+#       backup: yes 
+  
+#   - name: set DNS server
+#     lineinfile:
+#       path: /etc/resolv.conf
+#       state: present
+#       regexp: '^nameserver'
+#       line: nameserver {{ipaserver_ip_addresse }}
+
+    
+#   - name: reload NetworkManager
+#     service:
+#       name: NetworkManager
+#       state: reloaded
+
+- name: setup zoonavigator
+  hosts: all
+  become: yes
+  vars:
+    zoonav_port: 9000
+    zkconn: "zookeeper1.test.local:2181,zookeeper2.test.local:2181,zookeeper3.test.local:2181"
+    zkname: ZKCluster
+  tasks:
+    - name: create zoonavigator directory
+      file:
+        path: "{{item}}"
+        state: directory
+      with_items:
+        - /etc/docker-compose/zoonavigator
+
+    - name: create zoonavigator compose file
+      template:
+        src: files/zoonavigator-docker-compose.j2
+        dest: /etc/docker-compose/zoonavigator/docker-compose.yml
+    
+    - name: start zoonavigator service
+      systemd:
+       name: docker-compose@zoonavigator
+       state: started
+       enabled: yes
+       daemon_reload: yes
+
+
+
+
 ...

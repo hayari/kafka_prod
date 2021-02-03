@@ -66,6 +66,7 @@
   roles:
   - role: ipaclient
     state: present
+    
   
   post_tasks:
   - name: make sure line 'dns=none' is set in /etc/NetworkManager/NetworkManager.conf
@@ -97,6 +98,7 @@
 
 - name: zookeeper install
   hosts: all
+  become: true
   vars_files:
     - kafka_params.yml
   tasks:
@@ -151,7 +153,7 @@
           - vim
           - nc
         state: present
-    - 
+    
     - name: download kafka with zookeeper
       get_url:
         url: "https://downloads.apache.org/kafka/{{kafka_version}}/kafka_{{scala_version}}-{{kafka_version}}.tgz"
@@ -172,28 +174,76 @@
         src: /tmp/kafka.tgz
         remote_src: yes
         dest: /tmp
-    
-    - name: remove old installation if exist
-      file:
-        path: "{{zk_install_path}}"
-        state: absent
-    
-    - name: copy kafka files
-      command: "mv /tmp/kafka_{{scala_version}}-{{kafka_version}}  {{zk_install_path}}"
 
-    - name: adjust zookeeper dir ownership
+    - name: remove old zookeeper service if exist
+      systemd:
+        name: zookeeper
+        state: stopped
+      ignore_errors: yes 
+
+
+    - name: create zookeeper dirs 
       file:
-        path: "{{zk_install_path}}"
+        path: "{{item}}"
         state: directory
         recurse: yes
         owner: "{{zk_user_operator}}"
         group: "{{zk_group_operator}}" 
 
+      with_items:
+        - "{{zk_data_dir}}"
+        - "{{zk_dataLogDir}}"
+        - "{{zk_install_path}}"
+
+    
+    - name: remove old installation if exist
+      file:
+        path: "{{zk_install_path}}/{{item}}"
+        state: absent
+      with_items:
+        - bin  
+        - config  
+        - libs  
+        - logs  
+        - site-docs
+
+    
+    - name: copy kafka files
+      shell: "mv -f /tmp/kafka_{{scala_version}}-{{kafka_version}}/{{item}}  {{zk_install_path}}"
+      with_items:
+        - bin  
+        - config  
+        - libs  
+        - site-docs
+
+    - name: adjust zookeeper dirs owner
+      file:
+        path: "{{item}}"
+        state: directory
+        recurse: yes
+        owner: "{{zk_user_operator}}"
+        group: "{{zk_group_operator}}" 
+
+      with_items:
+        - "{{zk_data_dir}}"
+        - "{{zk_dataLogDir}}"
+        - "{{zk_install_path}}"
+
     - name: update zk config
       template:
         src: files/zookeeper.properties.j2
         dest: "{{zk_install_path}}/config/zookeeper.properties"
-    
+
+
+
+    - name: generate myid file
+      copy:
+        content: "{{zkid[ansible_fqdn]}}"
+        dest: "{{zk_data_dir}}/myid"
+        owner: "{{zk_user_operator}}"
+        group: "{{zk_group_operator}}" 
+
+
     - name: update zk running parameters
       template:
         src: files/zookeeper-server-start.sh.j2

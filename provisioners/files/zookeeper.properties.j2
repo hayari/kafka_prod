@@ -11,3 +11,13 @@ admin.enableServer={{zk_admin_enableServer}}
 {% if zk_admin_enableServer %}
 admin.serverPort="{{zk_admin_serverPort}}"
 {% endif %}
+tickTime={{zk_tickTime}}
+initLimit={{zk_initLimit}}
+syncLimit={{zk_syncLimit}}
+{% for host in zkid%}
+{%if host==ansible_fqdn%}
+server.{{zkid[host]}}=0.0.0.0:2888:3888
+{%else%}
+server.{{zkid[host]}}={{host}}:2888:3888
+{%endif%}
+{%endfor%}

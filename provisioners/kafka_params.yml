@@ -5,6 +5,7 @@ scala_version: 2.13
 # zookeeper
 zk_install_path: /zookeeper
 
+
 create_zk_operator: yes
 zk_operator_password_hash: $6$mysecretsalt$MIJffjeQyfrKKrGkprGrDL/g2mCJa53koLmYQuuLmY9y37pDvGKPXU1Ov3RbMi.tpQ9cWvxAzUVtBLe7KrZoU. # hash for word password
 zk_user_operator: zkuser
@@ -15,9 +16,15 @@ zk_clientPort: 2181
 zk_maxClientCnxns: 0
 zk_admin_enableServer: false
 zk_admin_serverPort: 8080
+zk_tickTime: 2000
+zk_initLimit: 10
+zk_syncLimit: 5
 zk_opts: |
   export KAFKA_OPTS="-Dzookeeper.4lw.commands.whitelist=*"
-
+zkid:
+  zookeeper1.test.local: 1
+  zookeeper2.test.local: 2
+  zookeeper3.test.local: 3
 
 
 #kafka_install_path: /kafka

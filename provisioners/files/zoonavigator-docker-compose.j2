@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  zoonavigator:
+    image: elkozmon/zoonavigator:latest
+    container_name: zoonavigator
+    network_mode: host
+    environment:
+      HTTP_PORT: {{zoonav_port}}
+      CONNECTION_{{zkname}}_NAME: {{zkname}}
+      CONNECTION_{{zkname}}_CONN: "{{zkconn}}"
+    restart: unless-stopped
