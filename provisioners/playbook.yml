@@ -5,7 +5,7 @@
   become_user: root
   vars:
 
-    create_user: hichem
+    create_user: kafka
     password_hash: $6$mysecretsalt$MIJffjeQyfrKKrGkprGrDL/g2mCJa53koLmYQuuLmY9y37pDvGKPXU1Ov3RbMi.tpQ9cWvxAzUVtBLe7KrZoU. # hash for word password
   tasks:
         

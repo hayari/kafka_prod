@@ -26,9 +26,27 @@ zkid:
   zookeeper2.test.local: 2
   zookeeper3.test.local: 3
 
-
-#kafka_install_path: /kafka
-#create_kafka_operator: no
-#kafka_operator_password_hash: $6$mysecretsalt$MIJffjeQyfrKKrGkprGrDL/g2mCJa53koLmYQuuLmY9y37pDvGKPXU1Ov3RbMi.tpQ9cWvxAzUVtBLe7KrZoU. # hash for word password
-#kafka_user_operator: vagrant
-#kafka_group_operator: vagrant
+# kafka
+kafka_bin_dir: /kafka
+kafka_log_dirs: /data/kafka
+kafka_operator_password_hash: $6$mysecretsalt$MIJffjeQyfrKKrGkprGrDL/g2mCJa53koLmYQuuLmY9y37pDvGKPXU1Ov3RbMi.tpQ9cWvxAzUVtBLe7KrZoU. # hash for word password
+kafka_user: kafka
+kafka_group: kafka
+kafkaid:
+  kafka1.test.local: 1
+  kafka2.test.local: 2
+  kafka3.test.local: 3
+kafka_security_protocol: PLAINTEXT
+kafka_listener_port: 9092
+kafka_user_authentification: PLAIN
+kafka_delete_topic_enable: "true"
+kafka_default_num_partitions: 8
+kafka_default_min_insync_replicas: 2
+kafka_default_replication_factor: 3
+kafka_default_log_retention_hours: 168
+kafka_default_log_segment_bytes: 1073741824
+kafka_default_log_retention_check_interval_ms: 300000
+kafka_zookeeper_connection_timeout_ms: 6000
+kafka_auto_create_topics_enable: "true"
+kafka_opts: |
+  export KAFKA_OPTS=""

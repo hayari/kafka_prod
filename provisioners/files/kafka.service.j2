@@ -1,0 +1,21 @@
+# /usr/lib/systemd/system/kafka.service
+[Unit]
+Description=Apache Kafka server (Kafka)
+Documentation=http://kafka.apache.org
+Requires=network.target remote-fs.target 
+After=network.target remote-fs.target
+
+[Service]
+Type=simple
+User={{kafka_user}}
+Group={{kafka_group}}
+WorkingDirectory={{kafka_bin_dir}}
+SyslogIdentifier=kafka
+ExecStart={{kafka_bin_dir}}/bin/kafka-server-start.sh  {{kafka_bin_dir}}/config/server.properties
+ExecStop={{kafka_bin_dir}}t/bin/kakfa-server-stop.sh
+LimitNOFILE=100000
+TimeoutStopSec=180
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

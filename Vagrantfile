@@ -8,9 +8,9 @@ cluster = {
   "zookeeper1.test.local" => {  :ip => "192.168.121.21", :cpus => 1, :mem => 1024, :boxname => "bento/centos-7.9", :provider => "virtualbox", :playbook => "provisioners/playbook_zookeeper.yml"},
   "zookeeper2.test.local" => {  :ip => "192.168.121.22", :cpus => 1, :mem => 1024, :boxname => "bento/centos-7.9", :provider => "virtualbox", :playbook => "provisioners/playbook_zookeeper.yml"},
   "zookeeper3.test.local" => {  :ip => "192.168.121.23", :cpus => 1, :mem => 1024, :boxname => "bento/centos-7.9", :provider => "virtualbox", :playbook => "provisioners/playbook_zookeeper.yml"},
-#  "kafka1.test.local" => { :ip => "192.168.121.10", :cpus => 1, :mem => 3072, :boxname => "bento/centos-7.9", :provider => "virtualbox", :playbook => "provisioners/playbook.yml"},
-#  "kafka2.test.local" => {  :ip => "192.168.121.11", :cpus => 1, :mem => 3072, :boxname => "bento/centos-7.9", :provider => "virtualbox", :playbook => "provisioners/playbook.yml"},
-#  "kafka3.test.local" => {  :ip => "192.168.121.12", :cpus => 1, :mem => 3072, :boxname => "bento/centos-7.9", :provider => "virtualbox", :playbook => "provisioners/playbook.yml"},
+  "kafka1.test.local" => { :ip => "192.168.121.10", :cpus => 1, :mem => 2048, :boxname => "bento/centos-7.9", :provider => "virtualbox", :playbook => "provisioners/playbook_kafka.yml"},
+  "kafka2.test.local" => {  :ip => "192.168.121.11", :cpus => 1, :mem => 2048, :boxname => "bento/centos-7.9", :provider => "virtualbox", :playbook => "provisioners/playbook_kafka.yml"},
+  "kafka3.test.local" => {  :ip => "192.168.121.12", :cpus => 1, :mem => 2048, :boxname => "bento/centos-7.9", :provider => "virtualbox", :playbook => "provisioners/playbook_kafka.yml"},
   "monitor.test.local" => {  :ip => "192.168.121.15", :cpus => 1, :mem => 1024, :boxname => "bento/ubuntu-20.04", :provider => "virtualbox", :playbook => "provisioners/playbook_monitor.yml"}
 }
  

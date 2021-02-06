@@ -1,0 +1,241 @@
+---
+- name: Ansible provisioning
+  hosts: all
+  become: yes
+  become_user: root
+  vars:
+
+  tasks:
+        
+    - name: permit root login
+      lineinfile: 
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        state: present
+        
+    - name: permit password Authentification
+      lineinfile: 
+        path: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication'
+        line: 'PasswordAuthentication yes'
+        state: present
+        
+    - name: restart sshd service
+      service:  name=sshd  state=restarted
+      
+    - name: Make sure we have a 'wheel' group
+      group:
+         name: wheel
+         state: present
+
+    - name: Allow 'wheel' group to have passwordless sudo
+      lineinfile:
+          dest: /etc/sudoers
+          state: present
+          regexp: '^%wheel'
+          line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+          validate: 'visudo -cf %s'
+          
+    - name: disable firewall service
+      service: 
+          name: "ufw"  
+          state: stopped 
+          enabled: false
+      when: ansible_facts.os_family == "Debian"
+
+    - name: disable firewall service
+      service: 
+          name: "firewalld"  
+          state: stopped 
+          enabled: false
+      when: ansible_facts.os_family == "RedHat"
+
+- name: register client in freeipa 
+  become: true
+  hosts: all
+  vars_files:
+    - ipa_params.yml 
+  pre_tasks:
+   - add_host:
+      name: "{{ipaclient_servers}}"   
+      groups: "ipaserver"
+
+  roles:
+  - role: ipaclient
+    state: present
+    
+  
+  post_tasks:
+  - name: make sure line 'dns=none' is set in /etc/NetworkManager/NetworkManager.conf
+    ini_file:
+      path: /etc/NetworkManager/NetworkManager.conf
+      state: present
+      no_extra_spaces: yes
+      section: main
+      option: dns
+      value: none
+      owner: root
+      group: root
+      mode: 0644
+      backup: yes 
+  
+  - name: set DNS server
+    lineinfile:
+      path: /etc/resolv.conf
+      state: present
+      regexp: '^nameserver'
+      line: nameserver {{ipaserver_ip_addresse }}
+
+    
+  - name: reload NetworkManager
+    service:
+      name: NetworkManager
+      state: reloaded
+      
+
+- name: Install Kafka        
+  hosts: all
+  become: yes
+  vars_files:
+  - kafka_params.yml
+  tasks:
+    - name: install some packages
+      package:
+        state: present
+        name:
+          - xfsprogs
+          - wget
+          - ca-certificates
+          - zip
+          - net-tools
+          - tar
+          - java-1.8.0-openjdk
+          - vim
+          - nc
+
+    - name: create kafka group
+      group:
+        name: "{{kafka_group}}"
+        state: present
+
+    - name: create kafka operator
+      user:
+        name: "{{kafka_user}}" 
+        groups: "{{kafka_group}}"
+        append: yes   
+        password: "{{kafka_operator_password_hash}}"
+
+    - name: create kafka directories
+      file:
+        path: "{{item}}"
+        state: directory
+        owner: "{{kafka_user}}"
+        group: "{{kafka_group}}" 
+      with_items:
+        - "{{kafka_bin_dir}}"
+        - "{{kafka_log_dirs}}"  
+
+    - name: Augment hard file limits
+      lineinfile:
+        path: /etc/security/limits.conf
+        regexp: 'hard .* nofile'
+        line: '* hard nofile 100000'
+
+    - name: Augment soft file limits
+      lineinfile:
+        path: /etc/security/limits.conf
+        regexp: 'soft .* nofile'
+        line: '* soft nofile 100000'
+
+    - name: download kafka 
+      get_url:
+        url: "https://downloads.apache.org/kafka/{{kafka_version}}/kafka_{{scala_version}}-{{kafka_version}}.tgz"
+        dest: /tmp/kafka.tgz
+        mode: '0440'
+      when: download_kafka
+
+    - name: copy kafka 
+      copy:
+        src: "files/kafka_{{scala_version}}-{{kafka_version}}.tgz"
+        dest: /tmp/kafka.tgz
+        mode: '0440'
+      when: not download_kafka
+
+    
+    - name: uncompress kafka zipfile
+      unarchive:
+        src: /tmp/kafka.tgz
+        remote_src: yes
+        dest: /tmp
+
+    - name: remove old kafka service if exist
+      systemd:
+        name: kafka
+        state: stopped
+      ignore_errors: yes 
+
+    - name: remove old installation if exist
+      file:
+        path: "{{kafka_bin_dir}}/{{item}}"
+        state: absent
+      with_items:
+        - bin  
+        - config  
+        - libs  
+        - logs  
+        - site-docs
+
+    
+    - name: copy kafka files
+      shell: "mv -f /tmp/kafka_{{scala_version}}-{{kafka_version}}/{{item}}  {{kafka_bin_dir}}"
+      with_items:
+        - bin  
+        - config  
+        - libs  
+        - site-docs
+
+    - name: adjust kafka dirs owner
+      file:
+        path: "{{item}}"
+        state: directory
+        recurse: yes
+        owner: "{{kafka_user}}"
+        group: "{{kafka_group}}" 
+
+      with_items:
+        - "{{kafka_bin_dir}}"
+        - "{{kafka_log_dirs}}"
+
+    - name: calculate zk connect string
+      set_fact:
+        zkstring: "{{zkstring|default('')}},{{item.key}}:{{zk_clientPort}}"
+      with_dict: "{{zkid}}"
+
+    - name: adjust zkstring
+      set_fact:
+        zkstring: "{{ zkstring | regex_replace('^,') }}"
+
+    
+    - name: update kafka config
+      template:
+        src: files/server.properties.j2
+        dest: "{{kafka_bin_dir}}/config/server.properties"
+
+    - name: update kafka running parameters
+      template:
+        src: files/kafka-server-start.sh.j2
+        dest: "{{kafka_bin_dir}}/bin/kafka-server-start.sh"
+
+    - name: create systemd service file
+      template:
+        src: files/kafka.service.j2
+        dest: /usr/lib/systemd/system/kafka.service
+
+    - name: enable kafka service
+      systemd:
+        daemon_reload: yes
+        name: kafka
+        state: restarted
+        enabled: yes
+...
