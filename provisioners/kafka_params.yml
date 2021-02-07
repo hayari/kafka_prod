@@ -48,5 +48,7 @@ kafka_default_log_segment_bytes: 1073741824
 kafka_default_log_retention_check_interval_ms: 300000
 kafka_zookeeper_connection_timeout_ms: 6000
 kafka_auto_create_topics_enable: "true"
-kafka_opts: |
-  export KAFKA_OPTS=""
+kafka_opts: ""
+kafka_log4j_opts: ""
+kafka_heap_opts: "-Xmx512M -Xms512M"
+kafka_jmx_opts: "-Dcom.sun.management.jmxremote -Djava.rmi.server.hostname=localhost -Dcom.sun.management.jmxremote.port=9010  -Dcom.sun.management.jmxremote.local.only=false  -Dcom.sun.management.jmxremote.authenticate=false  -Dcom.sun.management.jmxremote.ssl=false "

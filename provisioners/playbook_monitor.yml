@@ -200,7 +200,35 @@
        enabled: yes
        daemon_reload: yes
 
+- name: setup kafka Manager
+  hosts: all
+  become: yes
+  vars:
+    kafka_manager_port: 9001
+    zkconn: "zookeeper1.test.local:2181,zookeeper2.test.local:2181,zookeeper3.test.local:2181"
+    application_secret: "random-secret"
+    kafka_manager_auth_enabled: "true"
+    kafka_manager_username: "admin"
+    kafka_manager_password: "password"
+  tasks:
+    - name: create kafkamanager directory
+      file:
+        path: "{{item}}"
+        state: directory
+      with_items:
+        - /etc/docker-compose/kafkamanager
 
+    - name: create kafkamanager compose file
+      template:
+        src: files/kafkamanager-docker-compose.j2
+        dest: /etc/docker-compose/kafkamanager/docker-compose.yml
+    
+    - name: start kafkamanager service
+      systemd:
+       name: docker-compose@kafkamanager
+       state: started
+       enabled: yes
+       daemon_reload: yes
 
 
 ...

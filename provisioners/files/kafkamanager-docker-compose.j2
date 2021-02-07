@@ -1,0 +1,13 @@
+version: '3.6'
+services:
+  kafka_manager:
+    image: hlebalbau/kafka-manager:stable
+    ports:
+      - "{{kafka_manager_port}}:9000"
+    restart: always
+    environment:
+           ZK_HOSTS: "{{zkconn}}"
+           APPLICATION_SECRET: "{{application_secret}}"
+           KAFKA_MANAGER_AUTH_ENABLED: "{{kafka_manager_auth_enabled}}"
+           KAFKA_MANAGER_USERNAME: "{{kafka_manager_username}}"
+           KAFKA_MANAGER_PASSWORD: "{{kafka_manager_password}}"
